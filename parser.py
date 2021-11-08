@@ -23,10 +23,12 @@ class Client:
         """Сlass constructor
 
         Arguments:
-        url - path to site
-        result - list of saved parsing parameters.
+        url - path to site,
+        result - list of saved parsing parameters,
+        user_urls - list of urls to user accounts.
         """
         self.url = url = 'https://www.reddit.com/top?t=month'
+        self.user_urls = []
         self.result: list[str] = []
 
     def get_result(self):
@@ -39,7 +41,7 @@ class Client:
         options = webdriver.ChromeOptions()
         options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
                              "like Gecko) Chrome/95.0.4638.69 Safari/537.36")
-        options.add_argument("--headless")
+        options.add_argument('--headless')
         driver = webdriver.Chrome(executable_path='resourсes/chromedriver.exe', options=options)
         driver.maximize_window()
         try:
@@ -84,6 +86,25 @@ class Client:
         and saves it to the result list.
         Logs errors in case of missing information.
         """
+        uniq_id = self.get_unique_id()
+        url = self.get_url(block)
+        user_name = self.get_user_name(block)
+        user_url = self.get_user_url(block)
+        post_date = None
+        count_comments = self.get_count_comments(block)
+        count_of_votes = self.get_count_of_votes(block)
+        post_category = self.get_post_category(block)
+        if None in [url, user_name, count_comments, count_of_votes, post_category]:
+            return
+        self.user_urls.append(user_url)
+        self.result.append(f'{uniq_id};{url};{user_name};{post_date};'
+                           f'{count_comments};{count_of_votes};{post_category}\n')
+
+    def get_unique_id(self):
+        """Generate and return a unique id"""
+        return str(uuid.uuid1().hex)
+
+    def get_url(self, block):
         block_url = block.select_one('a.SQnoC3ObvgnGjWt90zD9Z')
         if not block_url:
             logger.error('no block url')
@@ -92,18 +113,51 @@ class Client:
         if not url:
             logger.error('no elements')
             return
-        username = block.select_one('a._2tbHP6ZydRpjI44J3syuqC').text[2:]
-        if username == '[deleted]':
-            logger.error('no username')
-            return
-        logger.info(block_url)
         logger.info(url)
-        logger.info(username)
-        self.result.append(f'{self.get_unique_id()};{url};{username}\n')
+        return url
 
-    def get_unique_id(self):
-        """Generate and return a unique id"""
-        return str(uuid.uuid1().hex)
+    def get_user_name(self, block):
+        user_name = block.select_one('a._2tbHP6ZydRpjI44J3syuqC')
+        if user_name == '[deleted]' or not user_name:
+            logger.error('no user name')
+            return
+        logger.info(user_name)
+        return user_name.text[2:]
+
+    def get_user_url(self, block):
+        user_url = block.select_one('a._2tbHP6ZydRpjI44J3syuqC')
+        if not user_url:
+            logger.error('no user url')
+            return
+        logger.info(user_url)
+        return 'https://reddit.com' + user_url.get('href')
+
+    def get_post_date(self, block):
+        pass
+
+    def get_count_comments(self, block):
+        count_comments = block.find('span', class_='FHCV02u6Cp2zYL0fhQPsO').text
+        if not count_comments:
+            logger.error('no comments')
+            return
+        logger.info(count_comments)
+        return count_comments
+
+    def get_count_of_votes(self, block):
+        count_of_votes = block.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO').text
+        if not count_of_votes:
+            logger.error('no votes')
+            return
+        logger.info(count_of_votes)
+        return count_of_votes
+
+    def get_post_category(self, block):
+        post_category = block.select_one('a._3ryJoIoycVkA88fy40qNJc')
+        if not post_category:
+            logger.error('no category')
+            return
+        logger.info(post_category)
+        return post_category.get('href')[3:-1]
 
     def save_result(self) -> None:
         """Save the result to a file
@@ -115,9 +169,11 @@ class Client:
             f.writelines(self.result)
 
     def run(self) -> None:
-        """ Run the parser"""
+        """ Run the parser and show run time"""
+        start_time = time.time()
         self.get_result()
         self.save_result()
+        print(f"------ {time.time() - start_time} seconds ------")
 
 
 if __name__ == '__main__':
