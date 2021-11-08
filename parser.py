@@ -1,10 +1,9 @@
-from bs4 import BeautifulSoup
-import logging
 import datetime
-import uuid
-from selenium import webdriver
+import logging
 import time
-
+import uuid
+from bs4 import BeautifulSoup
+from selenium import webdriver
 """A module containing a class for parsing a page and logging"""
 format = '%(asctime)s %(lineno)s %(levelname)s:%(message)s'
 logging.basicConfig(format=format, level=logging.DEBUG)
@@ -40,6 +39,7 @@ class Client:
         options = webdriver.ChromeOptions()
         options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
                              "like Gecko) Chrome/95.0.4638.69 Safari/537.36")
+        options.add_argument("--headless")
         driver = webdriver.Chrome(executable_path='resourсes/chromedriver.exe', options=options)
         driver.maximize_window()
         try:
