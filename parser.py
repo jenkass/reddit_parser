@@ -2,8 +2,9 @@ import datetime
 import logging
 import time
 import uuid
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, ResultSet
 from selenium import webdriver
+
 """A module containing a class for parsing a page and logging"""
 format = '%(asctime)s %(lineno)s %(levelname)s:%(message)s'
 logging.basicConfig(format=format, level=logging.DEBUG)
@@ -14,7 +15,7 @@ class Client:
     """Create methods for parsing
 
     The class contains methods that allow you to get a dynamic page,
-    parse it and roadblocks, save the result to a file
+    searching article blocks and parse it, save the result to a file
     and a method to run the parser.
     """
 
@@ -28,13 +29,12 @@ class Client:
         self.url = url = 'https://www.reddit.com/top?t=month'
         self.result: list[str] = []
 
-    def get_source_html(self):
-        """Generate dynamic markup of the site
+    def get_result(self):
+        """Searching for posts and getting results
 
         Sends a request to the site by url, scrolls down the page
-        and gets the dynamic markup,
-        which is written to the file,
-        otherwise generates an exception.
+        and gets the dynamic markup.
+        Searching article blocks and calling the parsing method of each block.
         """
         options = webdriver.ChromeOptions()
         options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
@@ -45,35 +45,37 @@ class Client:
         try:
             driver.get(url=self.url)
             time.sleep(3)
+            initial_post_count = 0
             while True:
-                find_posts = driver.find_elements_by_class_name('_1oQyIsiPHYt6nx7VOmd1sz')
-                if len(find_posts) >= 100:
-                    with open('resourсes/source-page.html', 'w', encoding="utf-8") as file:
-                        file.write(driver.page_source)
-                    break
-                else:
-                    driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-                    time.sleep(3)
+                container = self.parse_page(driver.page_source)
+                last_post_count = len(container)
+                logger.info(initial_post_count)
+                logger.info(last_post_count)
+                for i in range(initial_post_count, last_post_count):
+                    if len(self.result) == 100:
+                        return
+                    else:
+                        self.parse_block(container[i])
+                initial_post_count = last_post_count
+                driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
+                time.sleep(3)
         except Exception as _ex:
             print(_ex)
         finally:
             driver.close()
             driver.quit()
 
-    def parse_page(self, path: str) -> None:
+    def parse_page(self, text) -> ResultSet:
         """Parsing a page block
 
         Gets blocks of posts from the site
         and calls the function parse_block() for each block.
         Takes the path to page markup.
         """
-        with open(path, encoding='utf-8') as file:
-            src = file.read()
-        soup = BeautifulSoup(src, 'lxml')
+        soup = BeautifulSoup(text, 'lxml')
         container = soup.select(
-            'div._1oQyIsiPHYt6nx7VOmd1sz', limit=100)
-        for block in container:
-            self.parse_block(block=block)
+            'div._1oQyIsiPHYt6nx7VOmd1sz')
+        return container
 
     def parse_block(self, block) -> None:
         """Parsing a single post
@@ -114,8 +116,7 @@ class Client:
 
     def run(self) -> None:
         """ Run the parser"""
-        self.get_source_html()
-        self.parse_page(path='resourсes/source-page.html')
+        self.get_result()
         self.save_result()
 
 
