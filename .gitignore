@@ -1,4 +1,6 @@
 /.idea/
 venv/
 reddit*.txt
-resourсes/*.html
+/resourсes/
+*init*.py
+*.pyc
