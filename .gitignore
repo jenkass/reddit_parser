@@ -1,6 +1,12 @@
-/.idea/
-venv/
-reddit*.txt
-/resourсes/
-*init*.py
 *.pyc
+*.pyd
+*.pyo
+/.cache/
+.idea
+/venv/
+.vend
+reddit*.txt
+/resourсes/*.exe
+/resourсes/*.html
+*init*.py
+

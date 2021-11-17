@@ -1,99 +1,149 @@
+"""The module contains an inherited class for retrieving data"""
+
 import datetime
 import logging
 import uuid
-"""The module contains an inherited class for retrieving data"""
-format = '%(asctime)s %(lineno)s %(levelname)s:%(message)s'
-logging.basicConfig(format=format, level=logging.DEBUG)
-logger = logging.getLogger('reddit')
+from typing import List, Optional
+
+from bs4 import Tag
+
+DOMEN: str = 'https://reddit.com'  # reddit domain
+
+format_log: str = '%(asctime)s %(lineno)s %(levelname)s:%(message)s'
+logging.basicConfig(format=format_log, level=logging.DEBUG)
+logger: logging.Logger = logging.getLogger('reddit')
 
 
 class BaseSelector:
     """Create methods to retrieve data"""
 
-    def get_unique_id(self):
-        """Generate and return a unique id"""
+    def get_unique_id(self) -> str:
+        """Generate a unique id
+
+        :return: unique id
+        """
         return str(uuid.uuid1().hex)
 
-    def get_post_url(self, block) -> str or None:
-        """Get and return post url"""
-        block_url = block.select_one('a.SQnoC3ObvgnGjWt90zD9Z')
+    def get_post_url(self, block: Tag) -> Optional[str]:
+        """Get post url
+
+        :param block: all the markup of one post
+        :return: post url or None
+        """
+        block_url: Tag = block.select_one('a.SQnoC3ObvgnGjWt90zD9Z')
         if not block_url:
             logger.error('no block url')
-            return
-        url = 'https://reddit.com' + block_url.get('href')
+            return None
+        url: str = DOMEN + block_url.get('href')
         if not url:
             logger.error('no elements')
-            return
+            return None
         return url
 
-    def get_user_name(self, block) -> str or None:
-        """Get and return user name"""
-        user_name = block.select_one('a._2tbHP6ZydRpjI44J3syuqC')
+    def get_user_name(self, block: Tag) -> Optional[str]:
+        """Get user name
+
+        :param block: all the markup of one post
+        :return: user name url or None
+        """
+        user_name: Tag = block.select_one('a._2tbHP6ZydRpjI44J3syuqC')
         if user_name == '[deleted]' or not user_name:
             logger.error('no user name')
-            return
+            return None
         logger.info(user_name.text)
         return user_name.text[2:]
 
-    def get_user_url(self, block) -> str or None:
-        """Get and return user url"""
-        user_url = block.select_one('a._2tbHP6ZydRpjI44J3syuqC')
+    def get_user_url(self, block: Tag) -> Optional[str]:
+        """Get user url
+
+        :param block: all the markup of one post
+        :return: user url url or None
+        """
+        user_url: Tag = block.select_one('a._2tbHP6ZydRpjI44J3syuqC')
         if not user_url:
             logger.error('no user url')
-            return
-        return 'https://reddit.com' + user_url.get('href')
+            return None
+        return DOMEN + user_url.get('href')
 
-    def get_post_date(self, block) -> str or None:
-        """Get and return post date"""
-        day_ago = block.select_one('a._3jOxDPIQ0KaOWpzvSQo-1s')
+    def get_post_date(self, block: Tag) -> Optional[str]:
+        """Get post date
+
+        :param block: all the markup of one post
+        :return: post date or None
+        """
+        day_ago: Tag = block.select_one('a._3jOxDPIQ0KaOWpzvSQo-1s')
         if not day_ago:
             logger.error('no post date')
-            return
+            return None
         return datetime.date.today() - datetime.timedelta(days=int(day_ago.text.split()[0]))
 
-    def get_count_comments(self, block) -> str or None:
-        """Get and return count comments"""
-        count_comments = block.find('span', class_='FHCV02u6Cp2zYL0fhQPsO')
+    def get_count_comments(self, block: Tag) -> Optional[str]:
+        """Get count comments
+
+        :param block: all the markup of one post
+        :return: count comments or None
+        """
+        count_comments: Tag = block.find('span', class_='FHCV02u6Cp2zYL0fhQPsO')
         if not count_comments:
             logger.error('no comments')
-            return
+            return None
         return count_comments.text
 
-    def get_count_of_votes(self, block) -> str or None:
-        """Get and return count of votes"""
-        count_of_votes = block.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO')
+    def get_count_of_votes(self, block: Tag) -> Optional[str]:
+        """Get count of votes
+
+        :param block: all the markup of one post
+        :return: count of votes or None
+        """
+        count_of_votes: Tag = block.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO')
         if not count_of_votes:
             logger.error('no votes')
-            return
+            return None
         return count_of_votes.text
 
-    def get_post_category(self, block) -> str or None:
-        """Get and return post category"""
-        post_category = block.select_one('a._3ryJoIoycVkA88fy40qNJc')
+    def get_post_category(self, block:Tag) -> Optional[str]:
+        """Get post category
+
+        :param block: all the markup of one post
+        :return: post category or None
+        """
+        post_category: Tag = block.select_one('a._3ryJoIoycVkA88fy40qNJc')
         if not post_category:
             logger.error('no category')
-            return
+            return None
         return post_category.get('href')[3:-1]
 
-    def get_karma(self, block) -> str or None:
-        """Get and return user karma"""
-        karma = block.select_one('span._1hNyZSklmcC7R_IfCUcXmZ')
+    def get_karma(self, block: Tag) -> Optional[str]:
+        """Get user karma
+
+        :param block: user page layout
+        :return: user karma or None
+        """
+        karma: Tag = block.select_one('span._1hNyZSklmcC7R_IfCUcXmZ')
         if not karma:
             logger.error('no karma')
-            return
+            return None
         return karma.text
 
-    def get_cake_day(self, block) -> str or None:
-        """Get and return user cake day"""
-        cake_day = block.select_one('span#profile--id-card--highlight-tooltip--cakeday')
+    def get_cake_day(self, block: Tag) -> Optional[str]:
+        """Get user cake day
+
+        :param block: user page layout
+        :return: user cake day or None
+        """
+        cake_day: Tag = block.select_one('span#profile--id-card--highlight-tooltip--cakeday')
         if not cake_day:
             logger.error('no cake_day')
-            return
+            return None
         return cake_day.text
 
-    def get_post_and_comment_karma(self, block_karma) -> str or None:
-        """Get and return user post karma and user comment karma"""
+    def get_post_and_comment_karma(self, block_karma: Tag) -> Optional[List]:
+        """Get user post karma and user comment karma
+
+        :param block_karma: user page layout
+        :return: list containing post and comment karma or None
+        """
         if not block_karma:
             logger.error('no post and comment carma')
-            return
+            return None
         return [block_karma.text.split()[0], block_karma.text.split()[3]]
