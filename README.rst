@@ -55,12 +55,24 @@ The chromedriver version is selected to match the Google Chrome version. The dow
 
     > python -m pip install -r requirements.txt
 
-6) Run the script:
+6) Run the script.
+
+   If you want to set the number of posts for parsing,
+   you must specify the optional argument ``-cp`` and specify the number of posts.
+
+   If you want to set the name of the resulting file,
+   you must specify the optional argument ``-n`` and specify the file name.
+
+   If you do not specify optional arguments, the default value for the number of posts = 100, and for the file name - ``reddit-YYYYYMMDDDHHMM.txt``.
 
 .. code-block:: shell
 
     > python parser.py
+    Example:
+    > python parser.py -cp 50
+    > python parser.py -n result.txt
+    > python parser.py -cp 3 -n data.txt
 
 Result
 ---------------------------
-After the script runs, the project directory will contain a resulting text file named ``reddit-YYYYMMDDHHMM.txt``, where YYYY - year; MM - month; DD - day; HH - hours; mm - minutes
+After the script runs, the project directory will contain a resulting text file named ``reddit-YYYYMMDDHHMM.txt``, where YYYY - year; MM - month; DD - day; HH - hours; mm - minutes, if the optional parameter -n was not specified, otherwise the resulting file will be called as specified in the optional parameter.

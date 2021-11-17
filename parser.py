@@ -1,5 +1,7 @@
 """A module containing a class for parsing a site and logging"""
 
+import argparse
+from argparse import Namespace
 import datetime
 import logging
 import time
@@ -41,6 +43,21 @@ class Client(base.BaseSelector):
         self.url: str = DOMEN + SECONDARY_URL
         self.result: List[str] = []
 
+    def optional_args(self) -> Namespace:
+        """Get optional parameters
+
+        Sets 2 optional parameters - the number of posts and
+        the name of the resulting file.
+        :return: args - a list with the received parameters
+        """
+        parser: argparse.ArgumentParser = argparse.ArgumentParser()
+        parser.add_argument('-cp', '--count_posts', type=int, default=100, help='number of posts for parsing')
+        parser.add_argument('-n', '--name_file', type=str,
+                            default=f"reddit-{datetime.datetime.today().strftime('%Y%m%d%H%M')}.txt",
+                            help='the name of the resulting file')
+        args: Namespace = parser.parse_args()
+        return args
+
     def start_selenium(self) -> WebDriver:
         """Create a Chrome Web Driver
 
@@ -64,6 +81,7 @@ class Client(base.BaseSelector):
         driver.maximize_window()
         driver.get(url=self.url)
         try:
+            count_post: int = self.optional_args().count_posts
             initial_post_count: int = 0
             while True:
                 container: ResultSet = self.parse_page(driver.page_source)
@@ -71,7 +89,7 @@ class Client(base.BaseSelector):
                 logger.info(initial_post_count)
                 logger.info(last_post_count)
                 for i in range(initial_post_count, last_post_count):
-                    if len(self.result) == 100:
+                    if len(self.result) == count_post:
                         return None
                     else:
                         self.parse_block(container[i])
@@ -170,7 +188,7 @@ class Client(base.BaseSelector):
 
         Creates or overwrites a file with parsing results.
         """
-        name_file: str = f"reddit-{datetime.datetime.today().strftime('%Y%m%d%H%M')}.txt"
+        name_file: str = self.optional_args().name_file
         with open(name_file, 'w', encoding="utf-8") as f:
             f.writelines(self.result)
 
