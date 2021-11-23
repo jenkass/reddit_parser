@@ -3,7 +3,10 @@
 import argparse
 from argparse import Namespace
 import datetime
+import json
 import logging
+import os.path
+import requests
 import time
 from typing import Dict, List, NoReturn, Optional
 
@@ -18,6 +21,8 @@ from selector import base
 
 DOMEN: str = 'https://reddit.com'  # reddit domain
 SECONDARY_URL: str = '/top?t=month'  # url to the top posts of the month
+NAME_FILE: str = f"reddit-{datetime.datetime.today().strftime('%Y%m%d')}.txt"  # name of the resulting file
+
 
 format_log: str = '%(asctime)s %(lineno)s %(levelname)s:%(message)s'
 logging.basicConfig(format=format_log, level=logging.DEBUG)
@@ -37,26 +42,30 @@ class Client(base.BaseSelector):
         """Constructor
 
         Arguments:
-        url - path to site,
-        result - list of saved parsing parameters.
+        url - path to site.
         """
         self.url: str = DOMEN + SECONDARY_URL
-        self.result: List[str] = []
 
     def optional_args(self) -> Namespace:
         """Get optional parameters
 
-        Sets 2 optional parameters - the number of posts and
-        the name of the resulting file.
+        Sets one optional parameter - the number of posts.
         :return: args - a list with the received parameters
         """
         parser: argparse.ArgumentParser = argparse.ArgumentParser()
         parser.add_argument('-cp', '--count_posts', type=int, default=100, help='number of posts for parsing')
-        parser.add_argument('-n', '--name_file', type=str,
-                            default=f"reddit-{datetime.datetime.today().strftime('%Y%m%d%H%M')}.txt",
-                            help='the name of the resulting file')
         args: Namespace = parser.parse_args()
         return args
+
+    def send_post_request(self, post: Dict[str, str]) -> NoReturn:
+        """Send POST request to API
+
+        :param post: dictionary (object) containing the data of one post
+        """
+        api_url: str = 'http://localhost:8087/posts/'
+        headers = {"Content-Type": "application/json"}
+        requests.post(api_url, data=json.dumps(post), headers=headers)
+
 
     def start_selenium(self) -> WebDriver:
         """Create a Chrome Web Driver
@@ -89,8 +98,11 @@ class Client(base.BaseSelector):
                 logger.info(initial_post_count)
                 logger.info(last_post_count)
                 for i in range(initial_post_count, last_post_count):
-                    if len(self.result) == count_post:
-                        return None
+                    if os.path.exists(NAME_FILE):
+                        if len(open(NAME_FILE).readlines()) == count_post:
+                            return None
+                        else:
+                            self.parse_block(container[i])
                     else:
                         self.parse_block(container[i])
                 initial_post_count = last_post_count
@@ -138,9 +150,12 @@ class Client(base.BaseSelector):
         if user_data is None:
             return None
 
-        self.result.append(f'{uniq_id};{url};{user_name};{user_data["karma"]};{user_data["cake day"]};'
-                           f'{user_data["post karma"]};{user_data["comment karma"]};{post_date};'
-                           f'{count_comments};{count_of_votes};{post_category}\n')
+        post: Dict[str, str] = {"unique id": uniq_id, "post URL": url, "username": user_name,
+                                "user karma": user_data["karma"], "user cake day": user_data["cake day"],
+                                "post karma": user_data["post karma"], "comment karma": user_data["comment karma"],
+                                "post date": post_date, "number of comments": count_comments,
+                                "number of votes": count_of_votes, "post category": post_category}
+        self.send_post_request(post)
 
     def parse_user_account(self, user_url: str) -> Optional[Dict[str, str]]:
         """Parsing a user account
@@ -183,20 +198,10 @@ class Client(base.BaseSelector):
             driver.close()
             driver.quit()
 
-    def save_result(self) -> NoReturn:
-        """Save the result to a file
-
-        Creates or overwrites a file with parsing results.
-        """
-        name_file: str = self.optional_args().name_file
-        with open(name_file, 'w', encoding="utf-8") as f:
-            f.writelines(self.result)
-
     def run(self) -> NoReturn:
         """ Run the parser and show run time"""
         start_time: float = time.time()
         self.get_result()
-        self.save_result()
         logger.info(f"------ {time.time() - start_time} seconds ------")
 
 

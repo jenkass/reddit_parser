@@ -75,7 +75,7 @@ class BaseSelector:
         if not day_ago:
             logger.error('no post date')
             return None
-        return datetime.date.today() - datetime.timedelta(days=int(day_ago.text.split()[0]))
+        return str(datetime.date.today() - datetime.timedelta(days=int(day_ago.text.split()[0])))
 
     def get_count_comments(self, block: Tag) -> Optional[str]:
         """Get count comments

@@ -48,7 +48,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         :return: the number of the line inserted into the file or None
          """
         try:
-            with open(NAME_FILE, 'a+') as file:
+            with open(NAME_FILE, 'a') as file:
+                if not self.match_check_id(post):
+                    return None
                 file.write(f"{';'.join(post.values())};\n")
             return len(open(NAME_FILE, 'r').readlines())
         except Exception as _ex:
@@ -115,10 +117,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if new_post['unique id'] == post['unique id']:
                     logger.error('post with this unique id already exists')
                     return False
+        return True
 
-            return True
-
-        return False
 
     def do_GET(self) -> NoReturn:
         """REST method GET
@@ -166,17 +166,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path == '/posts/':
             length = int(self.headers.get('content-length'))
             new_post: Dict[str, str] = json.loads(self.rfile.read(length))
-
-            if self.match_check_id(new_post):
-                row_number: Optional[int] = self.write_file(new_post)
-
-                if row_number is not None:
-                    self.send_response(201)
-                    logger.info('post added')
-                    data: Optional[Dict[str, int]] = {"unique id": row_number}
-
-                else:
-                    data = None
+            row_number: Optional[int] = self.write_file(new_post)
+            if row_number is not None:
+                self.send_response(201)
+                logger.info('post added')
+                data: Optional[Dict[str, int]] = {"unique id": row_number}
 
             else:
                 data = None
