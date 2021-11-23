@@ -10,7 +10,7 @@ PORT: int = 8087
 NAME_FILE: str = f"reddit-{datetime.datetime.today().strftime('%Y%m%d')}.txt"
 DATA: Tuple[str, ...] = ('unique id', 'post URL', 'username', 'user karma', 'user cake day', 'post karma',
                          'comment karma', 'post date', 'number of comments', 'number of votes', 'post category')
-UUID4HEX: Pattern = re.compile('[0-9a-f]{12}1[0-9a-f]{19}')
+UUID4HEX: Pattern = re.compile('/posts/[0-9a-f]{12}1[0-9a-f]{19}/')
 
 format_log: str = '%(asctime)s %(lineno)s %(levelname)s:%(message)s'
 logging.basicConfig(format=format_log, level=logging.DEBUG)
@@ -37,6 +37,23 @@ class RequestHandler(BaseHTTPRequestHandler):
             logger.error(_ex)
             return None
 
+    def update_file(self, update_post: Dict[str, str]) -> Optional[bool]:
+        try:
+            with open(NAME_FILE, 'r') as old_file:
+                list_posts: List[str] = old_file.readlines()
+
+            for i, post in enumerate(list_posts):
+                if post.startswith(update_post['unique id']):
+                    list_posts[i]: str = f"{';'.join(update_post.values())};\n"
+
+            with open(NAME_FILE, 'w') as new_file:
+                new_file.writelines(list_posts)
+
+            return True
+        except Exception as _ex:
+            logger.error(_ex)
+            return None
+
     def match_check_id(self, new_post: Dict[str, str]) -> bool:
         list_posts: Optional[List[Dict[str, str]]] = self.read_file()
         if list_posts is not None:
@@ -57,10 +74,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 logger.info('response sent')
 
             elif re.search(UUID4HEX, self.path) is not None:
-                logger.info('run')
-
                 for post in data:
-                    logger.info(post['unique id'])
 
                     if self.path[7:-1] == post['unique id']:
                         self.send_response(200)
@@ -68,10 +82,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                         logger.info('response sent')
                         break
 
-                    else:
-                        self.send_response(404)
-                        data: str = 'Not found'
-                        break
+                else:
+                    self.send_response(404)
+                    data: str = 'Not found'
 
             else:
                 logger.error('unknown path for GET')
@@ -91,7 +104,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
                 if row_number is not None:
                     self.send_response(201)
-                    logger.info('Post added')
+                    logger.info('post added')
                     data: Optional[Dict[str, int]] = {"unique id": row_number}
 
                 else:
@@ -102,6 +115,27 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         else:
             logger.error('unknown path for POST')
+            data = None
+
+        self.send_header('content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode('utf-8'))
+
+    def do_PUT(self) -> NoReturn:
+        if re.search(UUID4HEX, self.path) is not None:
+            length = int(self.headers.get('content-length'))
+            update_post: Dict[str, str] = json.loads(self.rfile.read(length))
+
+            if self.update_file(update_post):
+                self.send_response(200)
+                logger.info('post updated')
+                data = None
+
+            else:
+                data = None
+
+        else:
+            logger.error('unknown path for PUT')
             data = None
 
         self.send_header('content-type', 'application/json')
