@@ -28,6 +28,26 @@ class RequestHandler(BaseHTTPRequestHandler):
         Also the class contains GET, POST, PUT, DELETE methods handlers
         """
 
+    def check_valid_post(self, post: Dict[str, str]) -> bool:
+        """Check the validity of the post
+
+        :param post: dictionary (object) containing the data of one post
+        :return: bool value (flag)
+        """
+        if len(post) != len(DATA):
+            logger.error('The amount of data in the post is invalid')
+            return False
+
+        for i, (key, value) in enumerate(post.items()):
+            if key != DATA[i]:
+                logger.error('invalid key')
+                return False
+
+            if not isinstance(value, str):
+                logger.error('invalid type value')
+                return False
+        return True
+
     def read_file(self) -> Optional[List[Dict[str, str]]]:
         """Read all lines (post data) from the file and translate them into the dictionary
 
@@ -166,11 +186,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path == '/posts/':
             length = int(self.headers.get('content-length'))
             new_post: Dict[str, str] = json.loads(self.rfile.read(length))
-            row_number: Optional[int] = self.write_file(new_post)
-            if row_number is not None:
-                self.send_response(201)
-                logger.info('post added')
-                data: Optional[Dict[str, int]] = {"unique id": row_number}
+            if self.check_valid_post(new_post):
+                row_number: Optional[int] = self.write_file(new_post)
+                if row_number is not None:
+                    self.send_response(201)
+                    logger.info('post added')
+                    data: Optional[Dict[str, int]] = {"unique id": row_number}
+
+                else:
+                    data = None
 
             else:
                 data = None
@@ -193,10 +217,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             length = int(self.headers.get('content-length'))
             update_post: Dict[str, str] = json.loads(self.rfile.read(length))
 
-            if self.update_file(self.path[7:-1], update_post):
-                self.send_response(200)
-                logger.info('post updated')
-                data = None
+            if self.check_valid_post(update_post):
+                if self.update_file(self.path[7:-1], update_post):
+                    self.send_response(200)
+                    logger.info('post updated')
+                    data = None
+
+                else:
+                    data = None
 
             else:
                 data = None

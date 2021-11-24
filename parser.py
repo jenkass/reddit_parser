@@ -5,7 +5,7 @@ from argparse import Namespace
 import datetime
 import json
 import logging
-import os.path
+import os
 import requests
 import time
 from typing import Dict, List, NoReturn, Optional
