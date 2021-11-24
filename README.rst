@@ -1,9 +1,9 @@
-Reddit Parser
+Reddit Parser with REST API
 ==========
 
-This is an API for collecting data from www.reddit.com. The best articles of the month are parsed
-here. The result is a text file that contains the following information
-for each post:
+This is an application for collecting data from www.reddit.com. The best articles of the month are parsed
+here. The received data is formed into a json object and sent by POST method to the server. This object contains
+the following information for each post:
 
 * unique numeric identifier of the record
 * the name of user who posted
@@ -16,12 +16,35 @@ for each post:
 * number of votes
 * post category
 
-The output file contains 100 records. This API also ignores posts
+The output file contains 100 records. This application also ignores posts
 that do not match the following conditions:
 
 * the post is posted and the user who posted it is deleted
 * page content is not available without age verification
 * fails to collect data in the right format and to the fullest extent
+
+REST API Service
+---------------------------
+This is a Restful service that provides an API to handle CRUD operations on a file.
+It runs on ``http://localhost:8087/``. The server saves the result in a text file
+named ``reddit-YYYYYMMDD.txt`` where YYYY - year; MM - month; DD - day.
+
+List of service methods and endpoints:
+
+* ``GET http://localhost:8087/posts/`` - returns the contents of the entire file in JSON format
+
+* ``GET http://localhost:8087/posts/<UNIQUE_ID>/`` - returns the contents of the string with the ``UNIQUE_ID``
+
+* ``POST http://localhost:8087/posts/`` - adds a new line to the file, creates a new one if the file does not exist, checks the content of the file for the absence of duplicates in the ``UNIQUE_ID`` field before creating the line, in case of success it returns the operation code ``201``, as well as the JSON format ``{""UNIQUE_ID"": the number of the inserted line}``
+
+* ``DELETE http://localhost:8087/posts/<UNIQUE_ID>/`` - deletes the line of the file with the ``UNIQUE_ID``
+
+* ``PUT http://localhost:8087/posts/<UNIQUE_ID>/`` - changes the contents of the file string with the ``UNIQUE_ID``
+
+Unless otherwise specified, all requests return code ``200`` if successful; those referring to a line number return ``404``
+if no line with the requested number is found. Unless otherwise specified, the response content is empty.
+
+
 Installation / Requirements
 ---------------------------
 For the application to work you need to install Google Chrome (if not) and download chromedriver from the website: https://chromedriver.chromium.org/downloads
@@ -55,24 +78,29 @@ The chromedriver version is selected to match the Google Chrome version. The dow
 
     > python -m pip install -r requirements.txt
 
-6) Run the script.
+6) Run the server
+
+.. code-block:: shell
+
+    > python server.py
+
+7) Run the script on another command line.
 
    If you want to set the number of posts for parsing,
    you must specify the optional argument ``-cp`` and specify the number of posts.
 
-   If you want to set the name of the resulting file,
-   you must specify the optional argument ``-n`` and specify the file name.
-
-   If you do not specify optional arguments, the default value for the number of posts = 100, and for the file name - ``reddit-YYYYYMMDDDHHMM.txt``.
+   If you do not specify optional arguments, the default value for the number of posts = 100.
 
 .. code-block:: shell
 
     > python parser.py
     Example:
     > python parser.py -cp 50
-    > python parser.py -n result.txt
-    > python parser.py -cp 3 -n data.txt
+
+To terminate the server, press ``CTRL-C`` at the command line where the server was started.
 
 Result
 ---------------------------
-After the script runs, the project directory will contain a resulting text file named ``reddit-YYYYMMDDHHMM.txt``, where YYYY - year; MM - month; DD - day; HH - hours; mm - minutes, if the optional parameter -n was not specified, otherwise the resulting file will be called as specified in the optional parameter.
+After the parser sends all post data to the server, the server will save everything to a text file named ``reddit-YYYYMMDD.txt``,
+where YYYY - year; MM - month; DD - day. To further manipulate the data, you can use the ``POSTMAN`` application and
+send various methods with the endpoints listed above.
