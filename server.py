@@ -1,6 +1,5 @@
-"""Module containing the REST API server class with writing and reading data from file"""
+"""Module containing the REST API server class with writing and reading data from databases"""
 
-import datetime
 import json
 import logging
 import re
@@ -11,7 +10,6 @@ from typing import Dict, List, Tuple, Optional, NoReturn, Pattern
 from mongodb import MongoDB
 
 PORT: int = 8087  # server port
-NAME_FILE: str = f"reddit-{datetime.datetime.today().strftime('%Y%m%d')}.txt"  # name of the resulting file
 DATA: Tuple[str, ...] = ('unique id', 'post URL', 'username', 'user karma', 'user cake day', 'post karma',
                          'comment karma', 'post date', 'number of comments',
                          'number of votes', 'post category')  # cortege of the post fields
@@ -23,12 +21,10 @@ logger: logging.Logger = logging.getLogger('logger')
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    """Creating handlers for CRUD methods and writing and reading data from the file
+    """Creating handlers for CRUD methods
 
-        The class contains methods that allow you to read, write,
-        update or delete lines (post data) in the file.
-        Also the class contains GET, POST, PUT, DELETE methods handlers
-        """
+    The class contains GET, POST, PUT, DELETE methods handlers
+    """
 
     db = MongoDB()
 
@@ -52,86 +48,12 @@ class RequestHandler(BaseHTTPRequestHandler):
                 return False
         return True
 
-    def read_file(self) -> Optional[List[Dict[str, str]]]:
-        """Read all lines (post data) from the file and translate them into the dictionary
-
-        :return: list of dictionaries (objects) that contain data about the post or None
-        """
-        try:
-            with open(NAME_FILE, 'r') as file:
-                list_posts: List[List[str]] = [post.split(';') for post in file.readlines()]
-            return [{DATA[i]: post[i] for i in range(len(post) - 1)} for post in list_posts]
-        except Exception as _ex:
-            logger.error(_ex)
-            return None
-
-    def write_file(self, post: Dict[str, str]) -> Optional[int]:
-        """Open the file for writing and write the post data on a new line
-
-        :param post: dictionary (object) containing the data of one post
-        :return: the number of the line inserted into the file or None
-         """
-        try:
-            with open(NAME_FILE, 'a') as file:
-                if not self.match_check_id(post):
-                    return None
-                file.write(f"{';'.join(post.values())};\n")
-            return len(open(NAME_FILE, 'r').readlines())
-        except Exception as _ex:
-            logger.error(_ex)
-            return None
-
-    def update_file(self, uuid: str, update_post: Dict[str, str]) -> Optional[bool]:
-        """Read all lines from the file and update the data of the required post
-
-        :param uuid: unique post key
-        :param update_post: dictionary (object) containing the data of one post which is replaced by
-        :return: bool value (flag) or None
-        """
-        try:
-            with open(NAME_FILE, 'r') as old_file:
-                list_posts: List[str] = old_file.readlines()
-
-            for i, post in enumerate(list_posts):
-                if post.startswith(uuid):
-                    list_posts[i]: str = f"{';'.join(update_post.values())};\n"
-
-                    with open(NAME_FILE, 'w') as new_file:
-                        new_file.writelines(list_posts)
-
-                    return True
-        except Exception as _ex:
-            logger.error(_ex)
-            return None
-
-    def delete_row_in_file(self, uuid: str) -> Optional[bool]:
-        """Read all lines from the file and delete the line of the required post
-
-        :param uuid: unique post key
-        :return: bool value (flag) or None
-        """
-        try:
-            with open(NAME_FILE, 'r') as old_file:
-                list_posts: List[str] = old_file.readlines()
-
-            for i, post in enumerate(list_posts):
-                if post.startswith(uuid):
-                    list_posts.pop(i)
-
-                    with open(NAME_FILE, 'w') as new_file:
-                        new_file.writelines(list_posts)
-
-                    return True
-        except Exception as _ex:
-            logger.error(_ex)
-            return None
-
     def do_GET(self) -> NoReturn:
         """REST method GET
 
         A method which waits for certain endpoints
-        and returns either the contents of the entire file in json,
-        or returns the contents of a string with a unique key specified in the url.
+        and returns either all data from the database,
+        or data about a specific post and user.
         """
         data: Optional[List[Dict[str, str]]] = self.db.get_data()
 
@@ -166,7 +88,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         """REST method POST
 
         A method which waits for certain endpoints
-        and writes new post data to the file
+        and writes new data to database
         if there is no post with the same unique key.
         """
         if self.path == '/posts/':
@@ -197,7 +119,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         """REST method PUT
 
         A method which waits for certain endpoints
-        and updates the post data with the unique key obtained in the url in the file.
+        and updates data with the unique key obtained in the url.
         """
         if re.search(UUID4HEX, self.path) is not None:
             length = int(self.headers.get('content-length'))
@@ -227,7 +149,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         """REST method DELETE
 
         A method which waits for certain endpoints
-        and deletes the post data with the unique key obtained in the url in the file.
+        and deletes data with the unique key obtained in the url.
         """
         if re.search(UUID4HEX, self.path) is not None:
 
