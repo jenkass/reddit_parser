@@ -126,24 +126,6 @@ class RequestHandler(BaseHTTPRequestHandler):
             logger.error(_ex)
             return None
 
-    def match_check_id(self, new_post: Dict[str, str]) -> bool:
-        """Compare all existing unique keys in the file with the obtained
-
-        :param new_post: dictionary (object) containing the data of one post which all existing posts will be compared
-        :return: bool value (flag)
-        """
-        list_posts: Optional[List[Dict[str, str]]] = self.read_file()
-
-        if list_posts is not None:
-
-            for post in list_posts:
-
-                if new_post['unique id'] == post['unique id']:
-                    logger.error('post with this unique id already exists')
-                    return False
-        return True
-
-
     def do_GET(self) -> NoReturn:
         """REST method GET
 
@@ -151,7 +133,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         and returns either the contents of the entire file in json,
         or returns the contents of a string with a unique key specified in the url.
         """
-        data: Optional[List[Dict[str, str]]] = self.read_file()
+        data: Optional[List[Dict[str, str]]] = self.db.get_data()
 
         if data is not None:
 
@@ -162,7 +144,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             elif re.search(UUID4HEX, self.path) is not None:
                 for post in data:
 
-                    if self.path[7:-1] == post['unique id']:
+                    if self.path[7:-1] == post['_id']:
                         self.send_response(200)
                         data: Dict[str, str] = post
                         logger.info('response sent')
@@ -222,7 +204,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             update_post: Dict[str, str] = json.loads(self.rfile.read(length))
 
             if self.check_valid_post(update_post):
-                if self.update_file(self.path[7:-1], update_post):
+                if self.db.put_data(self.path[7:-1], update_post):
                     self.send_response(200)
                     logger.info('post updated')
                     data = None
@@ -249,7 +231,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         """
         if re.search(UUID4HEX, self.path) is not None:
 
-            if self.delete_row_in_file(self.path[7:-1]):
+            if self.db.delete_data(self.path[7:-1]):
                 self.send_response(200)
                 logger.info('row was deleted')
                 data = None

@@ -1,7 +1,7 @@
-from typing import Tuple
-
 import pymongo
 import logging
+
+from typing import Tuple
 
 from resourсes.config import CLUSTER
 
@@ -37,3 +37,42 @@ class MongoDB:
         except Exception as _ex:
             logger.error(_ex)
             return None
+
+    def get_data(self):
+        try:
+            data = []
+            for post in self.posts.find():
+                post.update(self.users.find_one({"_id": post["username"]}, {"_id": 0, "user karma": 1,
+                                                                            "user cake day": 1, "post karma": 1,
+                                                                            "comment karma": 1}))
+                data.append(post)
+            if not data:
+                return None
+            return data
+        except Exception as _ex:
+            logger.error(_ex)
+            return None
+
+    def put_data(self, id, data):
+        try:
+            new_data_post = ({field: data[field] for field in DATA_POST})
+            new_data_user = ({field: data[field] for field in DATA_USER})
+            if self.posts.update_one({"_id": id}, {"$set": new_data_post}).matched_count == 1:
+                if self.users.update_one({"_id": data["username"]}, {"$set": new_data_user}).matched_count == 1:
+                    return True
+            return None
+        except Exception as _ex:
+            logger.error(_ex)
+            return None
+
+    def delete_data(self, id):
+        try:
+            username = self.posts.find_one({"_id": id})["username"]
+            if self.posts.delete_one({"_id": id}):
+                if not self.posts.find_one({"username": username}):
+                    self.users.delete_one({"_id": username})
+                return True
+        except Exception as _ex:
+            logger.error(_ex)
+            return None
+
