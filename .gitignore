@@ -8,5 +8,6 @@
 reddit*.txt
 /resourсes/*.exe
 /resourсes/*.html
+/resourсes/*.py
 *init*.py
 

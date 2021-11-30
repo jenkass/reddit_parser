@@ -8,6 +8,8 @@ import re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Dict, List, Tuple, Optional, NoReturn, Pattern
 
+from mongodb import MongoDB
+
 PORT: int = 8087  # server port
 NAME_FILE: str = f"reddit-{datetime.datetime.today().strftime('%Y%m%d')}.txt"  # name of the resulting file
 DATA: Tuple[str, ...] = ('unique id', 'post URL', 'username', 'user karma', 'user cake day', 'post karma',
@@ -27,6 +29,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         update or delete lines (post data) in the file.
         Also the class contains GET, POST, PUT, DELETE methods handlers
         """
+
+    db = MongoDB()
 
     def check_valid_post(self, post: Dict[str, str]) -> bool:
         """Check the validity of the post
@@ -187,7 +191,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             length = int(self.headers.get('content-length'))
             new_post: Dict[str, str] = json.loads(self.rfile.read(length))
             if self.check_valid_post(new_post):
-                row_number: Optional[int] = self.write_file(new_post)
+                row_number: Optional[int] = self.db.insert_data(new_post)
                 if row_number is not None:
                     self.send_response(201)
                     logger.info('post added')
