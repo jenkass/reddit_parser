@@ -1,11 +1,13 @@
 """Module containing the REST API server class with writing and reading data from databases"""
 
+import argparse
+from argparse import Namespace
 import json
 import logging
 import re
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from typing import Dict, List, Tuple, Optional, NoReturn, Pattern
+from typing import Dict, List, Tuple, Optional, NoReturn, Pattern, Any
 
 from mongodb import MongoDB
 
@@ -20,13 +22,31 @@ logging.basicConfig(format=format_log, level=logging.DEBUG)
 logger: logging.Logger = logging.getLogger('logger')
 
 
+def optional_args() -> Any:
+    """Get optional parameters
+
+    Sets one optional parameter - database.
+    :return: args - a list with the received parameters
+    """
+    parser: argparse.ArgumentParser = argparse.ArgumentParser()
+    parser.add_argument('-db', '--database', type=str, default='mongo', help='database for saving data')
+    args: Namespace = parser.parse_args()
+    if args.database == 'mongo':
+        return MongoDB()
+    elif args.database == 'postgre':
+        return 1
+    else:
+        logger.error("unknown database")
+        return None
+
+
 class RequestHandler(BaseHTTPRequestHandler):
     """Creating handlers for CRUD methods
 
     The class contains GET, POST, PUT, DELETE methods handlers
     """
 
-    db = MongoDB()
+    db = optional_args()
 
     def check_valid_post(self, post: Dict[str, str]) -> bool:
         """Check the validity of the post
