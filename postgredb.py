@@ -1,5 +1,7 @@
+"""The module contains a class with methods for interacting with the PostgreSQL database"""
+
 import logging
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, List
 
 import psycopg2
 
@@ -15,13 +17,30 @@ logger: logging.Logger = logging.getLogger('logger')
 
 
 class PostgreDB:
+    """Create a class for working with the database
+
+    The class contains methods that allow you to read, write,
+    update or delete data in database tables.
+    """
 
     def __init__(self):
-        self.connection = psycopg2.connect(host=HOST, user=USER, password=PASSWORD, database=DB_NAME)
+        """Constructor
+
+        Arguments:
+        connection - link to the database server.
+        cursor - object for interaction with the database.
+        connection.autocommit - automatically save all changes to the database.
+        """
+        self.connection: psycopg2.connect = psycopg2.connect(host=HOST, user=USER, password=PASSWORD, database=DB_NAME)
         self.cursor = self.connection.cursor()
         self.connection.autocommit = True
 
-    def insert_data(self, data):
+    def insert_data(self, data: Dict[str, str]) -> Optional[int]:
+        """Add data to tables of posts and users
+
+        :param data: dictionary (object) containing the data of one post and one user
+        :return: row number in the table of posts or None
+        """
         try:
             self.cursor.execute(
                 """CREATE TABLE IF NOT EXISTS users(
@@ -32,6 +51,7 @@ class PostgreDB:
                     post_karma varchar(50) NOT NULL,
                     comment_karma varchar(50) NOT NULL);"""
             )
+
             self.cursor.execute(
                 """CREATE TABLE IF NOT EXISTS posts(
                     id varchar(50) PRIMARY KEY,
@@ -43,48 +63,69 @@ class PostgreDB:
                     user_id int,
                     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT);"""
             )
+
             self.cursor.execute(
                 f"""SELECT username from users where username like '{data['username']}';"""
             )
+
             if not self.cursor.fetchone():
+
                 self.cursor.execute(
                     f"""INSERT INTO users (username, user_karma, user_cake_day, post_karma, comment_karma) VALUES 
                     ('{data['username']}', '{data['user karma']}', '{data['user cake day']}', 
                     '{data['post karma']}', '{data['comment karma']}');"""
                 )
+
             self.cursor.execute(
                 f"""select id from users where username like '{data['username']}';"""
             )
-            id_user = self.cursor.fetchone()[0]
+
+            id_user: int = self.cursor.fetchone()[0]
+
             self.cursor.execute(
                 f"""INSERT INTO posts VALUES ('{data['unique id']}', '{data['post URL']}', '{data['post date']}', 
                     '{data['number of comments']}', '{data['number of votes']}', '{data['post category']}', 
                     '{id_user}');"""
             )
+
             self.cursor.execute(
                 """SELECT count(*) from posts;"""
             )
+
             return self.cursor.fetchone()[0]
         except Exception as _ex:
             logger.error(_ex)
             return None
 
-    def get_data(self):
+    def get_data(self) -> Optional[List[Dict[str, str]]]:
+        """Get all data from the database tables
+
+        :return: list of dictionaries (objects) that contain data about the post and user or None
+        """
         try:
             self.cursor.execute(
                 f"""SELECT p.id, p.post_url, u.username, u.user_karma, u.user_cake_day, u.post_karma, u.comment_karma, 
                 p.post_date, p.number_of_comments, p.number_of_votes, p.post_category  
                 FROM posts as p join users as u on p.user_id = u.id;"""
             )
-            list_posts = self.cursor.fetchall()
+
+            list_posts: List[Tuple[str, ...]] = self.cursor.fetchall()
+
             if not list_posts:
                 return None
+
             return [{DATA[i]: post[i] for i in range(len(post) - 1)} for post in list_posts]
         except Exception as _ex:
             logger.error(_ex)
             return None
 
     def put_data(self, id: str, data: Dict[str, str]) -> Optional[bool]:
+        """Update data in database tables
+
+        :param id: unique post key
+        :param data: dictionary (object) containing the data of one post and one user which is replaced by
+        :return: bool value (flag) or None
+        """
         try:
             self.cursor.execute(
                 f"""UPDATE posts SET
@@ -95,10 +136,13 @@ class PostgreDB:
                 post_category = '{data['post category']}'
                 where id like '{id}';"""
             )
+
             self.cursor.execute(
                 f"""SELECT user_id from posts where id like '{id}'"""
             )
-            user_id = self.cursor.fetchone()[0]
+
+            user_id: int = self.cursor.fetchone()[0]
+
             self.cursor.execute(
                 f"""UPDATE users SET
                 username = '{data['username']}',
@@ -108,29 +152,41 @@ class PostgreDB:
                 comment_karma = '{data['comment karma']}'
                 where id = {user_id}"""
             )
+
             return True
         except Exception as _ex:
             logger.error(_ex)
             return None
 
     def delete_data(self, id: str) -> Optional[bool]:
+        """Remove data from the database tables
+
+        :param id: unique post key
+        :return: bool value (flag) or None
+        """
         try:
             self.cursor.execute(
                 f"""SELECT user_id from posts where id like '{id}';"""
             )
-            user_id = self.cursor.fetchone()[0]
+
+            user_id: int = self.cursor.fetchone()[0]
+
             if not user_id:
                 return None
+
             self.cursor.execute(
                 f"""DELETE FROM posts where id like '{id}';"""
             )
+
             self.cursor.execute(
                 f"""SELECT * from posts where user_id = {user_id};"""
             )
+
             if not self.cursor.fetchone():
                 self.cursor.execute(
                     f"""DELETE FROM users where id = {user_id};"""
                 )
+
             return True
         except Exception as _ex:
             logger.error(_ex)
