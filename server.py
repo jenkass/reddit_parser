@@ -10,6 +10,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Dict, List, Tuple, Optional, NoReturn, Pattern, Any
 
 from mongodb import MongoDB
+from postgredb import PostgreDB
 
 PORT: int = 8087  # server port
 DATA: Tuple[str, ...] = ('unique id', 'post URL', 'username', 'user karma', 'user cake day', 'post karma',
@@ -34,7 +35,7 @@ def optional_args() -> Any:
     if args.database == 'mongo':
         return MongoDB()
     elif args.database == 'postgre':
-        return 1
+        return PostgreDB()
     else:
         logger.error("unknown database")
         return None
