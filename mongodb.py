@@ -1,9 +1,9 @@
 """The module contains a class with methods for interacting with the MongoDB No-SQL database"""
 
 import logging
-import pymongo
-
 from typing import Tuple, Dict, Optional, List
+
+import pymongo
 
 from resourсes.config import CLUSTER
 

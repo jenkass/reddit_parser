@@ -1,6 +1,17 @@
+import logging
+from typing import Tuple, Dict, Optional
+
 import psycopg2
 
 from resourсes.config import USER, PASSWORD, HOST, DB_NAME
+
+DATA: Tuple[str, ...] = ('_id', 'post URL', 'username', 'user karma', 'user cake day', 'post karma',
+                         'comment karma', 'post date', 'number of comments',
+                         'number of votes', 'post category')  # cortege of the post fields
+
+format_log: str = '%(asctime)s %(lineno)s %(levelname)s:%(message)s'
+logging.basicConfig(format=format_log, level=logging.DEBUG)
+logger: logging.Logger = logging.getLogger('logger')
 
 
 class PostgreDB:
@@ -8,10 +19,10 @@ class PostgreDB:
     def __init__(self):
         self.connection = psycopg2.connect(host=HOST, user=USER, password=PASSWORD, database=DB_NAME)
         self.cursor = self.connection.cursor()
+        self.connection.autocommit = True
 
     def insert_data(self, data):
         try:
-            self.connection.autocommit = True
             self.cursor.execute(
                 """CREATE TABLE IF NOT EXISTS users(
                     id serial PRIMARY KEY,
@@ -55,6 +66,72 @@ class PostgreDB:
             )
             return self.cursor.fetchone()[0]
         except Exception as _ex:
-            print(_ex)
+            logger.error(_ex)
             return None
 
+    def get_data(self):
+        try:
+            self.cursor.execute(
+                f"""SELECT p.id, p.post_url, u.username, u.user_karma, u.user_cake_day, u.post_karma, u.comment_karma, 
+                p.post_date, p.number_of_comments, p.number_of_votes, p.post_category  
+                FROM posts as p join users as u on p.user_id = u.id;"""
+            )
+            list_posts = self.cursor.fetchall()
+            if not list_posts:
+                return None
+            return [{DATA[i]: post[i] for i in range(len(post) - 1)} for post in list_posts]
+        except Exception as _ex:
+            logger.error(_ex)
+            return None
+
+    def put_data(self, id: str, data: Dict[str, str]) -> Optional[bool]:
+        try:
+            self.cursor.execute(
+                f"""UPDATE posts SET
+                post_url = '{data['post URL']}',
+                post_date = '{data['post date']}',
+                number_of_comments = '{data['number of comments']}',
+                number_of_votes = '{data['number of votes']}',
+                post_category = '{data['post category']}'
+                where id like '{id}';"""
+            )
+            self.cursor.execute(
+                f"""SELECT user_id from posts where id like '{id}'"""
+            )
+            user_id = self.cursor.fetchone()[0]
+            self.cursor.execute(
+                f"""UPDATE users SET
+                username = '{data['username']}',
+                user_karma = '{data['user karma']}',
+                user_cake_day = '{data['user cake day']}',
+                post_karma = '{data['post karma']}',
+                comment_karma = '{data['comment karma']}'
+                where id = {user_id}"""
+            )
+            return True
+        except Exception as _ex:
+            logger.error(_ex)
+            return None
+
+    def delete_data(self, id: str) -> Optional[bool]:
+        try:
+            self.cursor.execute(
+                f"""SELECT user_id from posts where id like '{id}';"""
+            )
+            user_id = self.cursor.fetchone()[0]
+            if not user_id:
+                return None
+            self.cursor.execute(
+                f"""DELETE FROM posts where id like '{id}';"""
+            )
+            self.cursor.execute(
+                f"""SELECT * from posts where user_id = {user_id};"""
+            )
+            if not self.cursor.fetchone():
+                self.cursor.execute(
+                    f"""DELETE FROM users where id = {user_id};"""
+                )
+            return True
+        except Exception as _ex:
+            logger.error(_ex)
+            return None
