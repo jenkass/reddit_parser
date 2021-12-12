@@ -1,4 +1,4 @@
-"""The module contains an inherited class for retrieving data"""
+"""The module contains a mixin for retrieving data"""
 
 import datetime
 import logging
@@ -14,17 +14,19 @@ logging.basicConfig(format=format_log, level=logging.DEBUG)
 logger: logging.Logger = logging.getLogger('reddit')
 
 
-class BaseSelector:
+class SelectorMixin:
     """Create methods to retrieve data"""
 
-    def get_unique_id(self) -> str:
+    @staticmethod
+    def get_unique_id() -> str:
         """Generate a unique id
 
         :return: unique id
         """
         return str(uuid.uuid1().hex)
 
-    def get_post_url(self, block: Tag) -> Optional[str]:
+    @staticmethod
+    def get_post_url(block: Tag) -> Optional[str]:
         """Get post url
 
         :param block: all the markup of one post
@@ -40,7 +42,8 @@ class BaseSelector:
             return None
         return url
 
-    def get_user_name(self, block: Tag) -> Optional[str]:
+    @staticmethod
+    def get_user_name(block: Tag) -> Optional[str]:
         """Get user name
 
         :param block: all the markup of one post
@@ -53,7 +56,8 @@ class BaseSelector:
         logger.info(user_name.text)
         return user_name.text[2:]
 
-    def get_user_url(self, block: Tag) -> Optional[str]:
+    @staticmethod
+    def get_user_url(block: Tag) -> Optional[str]:
         """Get user url
 
         :param block: all the markup of one post
@@ -65,7 +69,8 @@ class BaseSelector:
             return None
         return DOMEN + user_url.get('href')
 
-    def get_post_date(self, block: Tag) -> Optional[str]:
+    @staticmethod
+    def get_post_date(block: Tag) -> Optional[str]:
         """Get post date
 
         :param block: all the markup of one post
@@ -77,7 +82,8 @@ class BaseSelector:
             return None
         return str(datetime.date.today() - datetime.timedelta(days=int(day_ago.text.split()[0])))
 
-    def get_count_comments(self, block: Tag) -> Optional[str]:
+    @staticmethod
+    def get_count_comments(block: Tag) -> Optional[str]:
         """Get count comments
 
         :param block: all the markup of one post
@@ -89,7 +95,8 @@ class BaseSelector:
             return None
         return count_comments.text
 
-    def get_count_of_votes(self, block: Tag) -> Optional[str]:
+    @staticmethod
+    def get_count_of_votes(block: Tag) -> Optional[str]:
         """Get count of votes
 
         :param block: all the markup of one post
@@ -101,7 +108,8 @@ class BaseSelector:
             return None
         return count_of_votes.text
 
-    def get_post_category(self, block:Tag) -> Optional[str]:
+    @staticmethod
+    def get_post_category(block: Tag) -> Optional[str]:
         """Get post category
 
         :param block: all the markup of one post
@@ -113,7 +121,8 @@ class BaseSelector:
             return None
         return post_category.get('href')[3:-1]
 
-    def get_karma(self, block: Tag) -> Optional[str]:
+    @staticmethod
+    def get_karma(block: Tag) -> Optional[str]:
         """Get user karma
 
         :param block: user page layout
@@ -125,7 +134,8 @@ class BaseSelector:
             return None
         return karma.text
 
-    def get_cake_day(self, block: Tag) -> Optional[str]:
+    @staticmethod
+    def get_cake_day(block: Tag) -> Optional[str]:
         """Get user cake day
 
         :param block: user page layout
@@ -137,7 +147,8 @@ class BaseSelector:
             return None
         return cake_day.text
 
-    def get_post_and_comment_karma(self, block_karma: Tag) -> Optional[List]:
+    @staticmethod
+    def get_post_and_comment_karma(block_karma: Tag) -> Optional[List]:
         """Get user post karma and user comment karma
 
         :param block_karma: user page layout

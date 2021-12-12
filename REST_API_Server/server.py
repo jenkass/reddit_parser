@@ -9,14 +9,15 @@ import re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Dict, List, Tuple, Optional, NoReturn, Pattern, Any
 
-from mongodb import MongoDB
-from postgredb import PostgreDB
+from Databases.mongodb import MongoDB
+from Databases.postgredb import PostgreDB
 
 PORT: int = 8087  # server port
 DATA: Tuple[str, ...] = ('unique id', 'post URL', 'username', 'user karma', 'user cake day', 'post karma',
                          'comment karma', 'post date', 'number of comments',
                          'number of votes', 'post category')  # cortege of the post fields
 UUID4HEX: Pattern = re.compile('/posts/[0-9a-f]{12}1[0-9a-f]{19}/')  # pattern for a unique key (uuid4.hex)
+REG_UUID: Pattern = re.compile('[0-9a-f]{12}1[0-9a-f]{19}')  # pattern for the unique key in the url
 
 format_log: str = '%(asctime)s %(lineno)s %(levelname)s:%(message)s'
 logging.basicConfig(format=format_log, level=logging.DEBUG)
@@ -49,7 +50,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     db = optional_args()
 
-    def check_valid_post(self, post: Dict[str, str]) -> bool:
+    @staticmethod
+    def check_valid_post(post: Dict[str, str]) -> bool:
         """Check the validity of the post
 
         :param post: dictionary (object) containing the data of one post
@@ -85,9 +87,11 @@ class RequestHandler(BaseHTTPRequestHandler):
                 logger.info('response sent')
 
             elif re.search(UUID4HEX, self.path) is not None:
+                url_uuid: str = re.search(REG_UUID, self.path).group()
+
                 for post in data:
 
-                    if self.path[7:-1] == post['_id']:
+                    if url_uuid == post['_id']:
                         self.send_response(200)
                         data: Dict[str, str] = post
                         logger.info('response sent')
@@ -147,7 +151,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             update_post: Dict[str, str] = json.loads(self.rfile.read(length))
 
             if self.check_valid_post(update_post):
-                if self.db.put_data(self.path[7:-1], update_post):
+                url_uuid: str = re.search(REG_UUID, self.path).group()
+
+                if self.db.put_data(url_uuid, update_post):
                     self.send_response(200)
                     logger.info('post updated')
                     data = None
@@ -173,8 +179,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         and deletes data with the unique key obtained in the url.
         """
         if re.search(UUID4HEX, self.path) is not None:
+            url_uuid: str = re.search(REG_UUID, self.path).group()
 
-            if self.db.delete_data(self.path[7:-1]):
+            if self.db.delete_data(url_uuid):
                 self.send_response(200)
                 logger.info('row was deleted')
                 data = None

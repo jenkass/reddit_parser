@@ -49,7 +49,7 @@ To connect the database to the project, you need:
 
 1) To register at ``https://cloud.mongodb.com/``
 2) Create your ``cluster``, ``database user`` and ``IP-address``
-3) After that, when connecting in the code in the file ``mongodb.py`` in the ``CLUSTER`` variable put the string to connect to the cluster
+3) After that, when connecting in the code in the file ``Databases\mongodb.py`` in the ``CLUSTER`` variable put the string to connect to the cluster
 
 The database will have 2 collections: ``posts`` and ``users``.
 
@@ -111,10 +111,10 @@ The chromedriver version is selected to match the Google Chrome version. The dow
 
 .. code-block:: shell
 
-    > python server.py
+    > python -m REST_API_Server.server
     Example:
-    > python server.py -db 'mongo'
-    > python server.py -db 'postgre'
+    > python -m REST_API_Server.server -db 'mongo'
+    > python -m REST_API_Server.server -db 'postgre'
 
 7) Run the script on another command line.
 

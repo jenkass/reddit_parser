@@ -25,7 +25,7 @@ logging.basicConfig(format=format_log, level=logging.DEBUG)
 logger: logging.Logger = logging.getLogger('reddit')
 
 
-class Client(base.BaseSelector):
+class Client(base.SelectorMixin):
     """Create methods for parsing
 
     The class contains methods that allow you to get a dynamic page,
@@ -44,18 +44,20 @@ class Client(base.BaseSelector):
         self.url: str = DOMEN + SECONDARY_URL
         self.count_result_posts: int = 0
 
-    def optional_args(self) -> Namespace:
+    @staticmethod
+    def optional_args() -> Namespace:
         """Get optional parameters
 
         Sets one optional parameter - the number of posts.
         :return: args - a list with the received parameters
         """
-        parser: argparse.ArgumentParser = argparse.ArgumentParser()
-        parser.add_argument('-cp', '--count_posts', type=int, default=1000, help='number of posts for parsing')
-        args: Namespace = parser.parse_args()
+        arg_parser: argparse.ArgumentParser = argparse.ArgumentParser()
+        arg_parser.add_argument('-cp', '--count_posts', type=int, default=1000, help='number of posts for parsing')
+        args: Namespace = arg_parser.parse_args()
         return args
 
-    def send_post_request(self, post: Dict[str, str]) -> NoReturn:
+    @staticmethod
+    def send_post_request(post: Dict[str, str]) -> NoReturn:
         """Send POST request to API
 
         :param post: dictionary (object) containing the data of one post
@@ -64,7 +66,8 @@ class Client(base.BaseSelector):
         headers = {"Content-Type": "application/json"}
         requests.post(api_url, data=json.dumps(post), headers=headers)
 
-    def start_selenium(self) -> WebDriver:
+    @staticmethod
+    def start_selenium() -> WebDriver:
         """Create a Chrome Web Driver
 
          :return: Web Driver
@@ -107,7 +110,8 @@ class Client(base.BaseSelector):
             driver.close()
             driver.quit()
 
-    def parse_page(self, text: str) -> ResultSet:
+    @staticmethod
+    def parse_page(text: str) -> ResultSet:
         """Parsing a page block
 
         Gets blocks of posts from the site

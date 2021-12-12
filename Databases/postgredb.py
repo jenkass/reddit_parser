@@ -5,6 +5,7 @@ from typing import Tuple, Dict, Optional, List
 
 import psycopg2
 
+from Databases.Base_Database.abstract_database import Database
 from resourсes.config import USER, PASSWORD, HOST, DB_NAME
 
 DATA: Tuple[str, ...] = ('_id', 'post URL', 'username', 'user karma', 'user cake day', 'post karma',
@@ -16,7 +17,7 @@ logging.basicConfig(format=format_log, level=logging.DEBUG)
 logger: logging.Logger = logging.getLogger('logger')
 
 
-class PostgreDB:
+class PostgreDB(Database):
     """Create a class for working with the database
 
     The class contains methods that allow you to read, write,
@@ -26,6 +27,7 @@ class PostgreDB:
     def __init__(self):
         """Constructor
 
+        Create 2 tables if they do not already exist in the database.
         Arguments:
         connection - link to the database server.
         cursor - object for interaction with the database.
@@ -34,6 +36,27 @@ class PostgreDB:
         self.connection: psycopg2.connect = psycopg2.connect(host=HOST, user=USER, password=PASSWORD, database=DB_NAME)
         self.cursor = self.connection.cursor()
         self.connection.autocommit = True
+        self.cursor.execute(
+            """CREATE TABLE IF NOT EXISTS users(
+                id serial PRIMARY KEY,
+                username varchar(50) NOT NULL UNIQUE,
+                user_karma varchar(50) NOT NULL,
+                user_cake_day varchar(50) NOT NULL,
+                post_karma varchar(50) NOT NULL,
+                comment_karma varchar(50) NOT NULL);"""
+        )
+
+        self.cursor.execute(
+            """CREATE TABLE IF NOT EXISTS posts(
+                id varchar(50) PRIMARY KEY,
+                post_url varchar(150) NOT NULL,
+                post_date varchar(50) NOT NULL,
+                number_of_comments varchar(50) NOT NULL,
+                number_of_votes varchar(50) NOT NULL,
+                post_category varchar(50) NOT NULL,
+                user_id int,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT);"""
+        )
 
     def insert_data(self, data: Dict[str, str]) -> Optional[int]:
         """Add data to tables of posts and users
@@ -42,28 +65,6 @@ class PostgreDB:
         :return: row number in the table of posts or None
         """
         try:
-            self.cursor.execute(
-                """CREATE TABLE IF NOT EXISTS users(
-                    id serial PRIMARY KEY,
-                    username varchar(50) NOT NULL UNIQUE,
-                    user_karma varchar(50) NOT NULL,
-                    user_cake_day varchar(50) NOT NULL,
-                    post_karma varchar(50) NOT NULL,
-                    comment_karma varchar(50) NOT NULL);"""
-            )
-
-            self.cursor.execute(
-                """CREATE TABLE IF NOT EXISTS posts(
-                    id varchar(50) PRIMARY KEY,
-                    post_url varchar(150) NOT NULL,
-                    post_date varchar(50) NOT NULL,
-                    number_of_comments varchar(50) NOT NULL,
-                    number_of_votes varchar(50) NOT NULL,
-                    post_category varchar(50) NOT NULL,
-                    user_id int,
-                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT);"""
-            )
-
             self.cursor.execute(
                 f"""SELECT username from users where username like '{data['username']}';"""
             )
@@ -114,34 +115,34 @@ class PostgreDB:
             if not list_posts:
                 return None
 
-            return [{DATA[i]: post[i] for i in range(len(post) - 1)} for post in list_posts]
+            return [dict(zip(DATA, post)) for post in list_posts]
         except Exception as _ex:
             logger.error(_ex)
             return None
 
-    def put_data(self, id: str, data: Dict[str, str]) -> Optional[bool]:
+    def put_data(self, id_str: str, data: Dict[str, str]) -> Optional[bool]:
         """Update data in database tables
 
-        :param id: unique post key
+        :param id_str: unique post key
         :param data: dictionary (object) containing the data of one post and one user which is replaced by
         :return: bool value (flag) or None
         """
         try:
+            self.cursor.execute(
+                f"""SELECT id from users where username like '{data['username']}';"""
+            )
+            user_id: int = self.cursor.fetchone()[0]
+
             self.cursor.execute(
                 f"""UPDATE posts SET
                 post_url = '{data['post URL']}',
                 post_date = '{data['post date']}',
                 number_of_comments = '{data['number of comments']}',
                 number_of_votes = '{data['number of votes']}',
-                post_category = '{data['post category']}'
-                where id like '{id}';"""
+                post_category = '{data['post category']}',
+                user_id = {user_id}
+                where id like '{id_str}';"""
             )
-
-            self.cursor.execute(
-                f"""SELECT user_id from posts where id like '{id}'"""
-            )
-
-            user_id: int = self.cursor.fetchone()[0]
 
             self.cursor.execute(
                 f"""UPDATE users SET
@@ -158,24 +159,21 @@ class PostgreDB:
             logger.error(_ex)
             return None
 
-    def delete_data(self, id: str) -> Optional[bool]:
+    def delete_data(self, id_str: str) -> Optional[bool]:
         """Remove data from the database tables
 
-        :param id: unique post key
+        :param id_str: unique post key
         :return: bool value (flag) or None
         """
         try:
             self.cursor.execute(
-                f"""SELECT user_id from posts where id like '{id}';"""
+                f"""SELECT user_id from posts where id like '{id_str}';"""
             )
 
             user_id: int = self.cursor.fetchone()[0]
 
-            if not user_id:
-                return None
-
             self.cursor.execute(
-                f"""DELETE FROM posts where id like '{id}';"""
+                f"""DELETE FROM posts where id like '{id_str}';"""
             )
 
             self.cursor.execute(

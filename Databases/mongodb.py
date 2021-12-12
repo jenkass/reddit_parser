@@ -5,6 +5,7 @@ from typing import Tuple, Dict, Optional, List
 
 import pymongo
 
+from Databases.Base_Database.abstract_database import Database
 from resourсes.config import CLUSTER
 
 DATA_POST: Tuple[str, ...] = ('post URL', 'username', 'post date', 'number of comments',
@@ -18,7 +19,7 @@ logging.basicConfig(format=format_log, level=logging.DEBUG)
 logger: logging.Logger = logging.getLogger('logger')
 
 
-class MongoDB:
+class MongoDB(Database):
     """Create a class for working with the database
 
         The class contains methods that allow you to read, write,
@@ -82,10 +83,10 @@ class MongoDB:
             logger.error(_ex)
             return None
 
-    def put_data(self, id: str, data: Dict[str, str]) -> Optional[bool]:
+    def put_data(self, id_str: str, data: Dict[str, str]) -> Optional[bool]:
         """Update data in database collections
 
-        :param id: unique post key
+        :param id_str: unique post key
         :param data: dictionary (object) containing the data of one post and one user which is replaced by
         :return: bool value (flag) or None
         """
@@ -93,25 +94,26 @@ class MongoDB:
             new_data_post: Dict[str, str] = {field: data[field] for field in DATA_POST}
             new_data_user: Dict[str, str] = {field: data[field] for field in DATA_USER}
 
-            if self.posts.update_one({"_id": id}, {"$set": new_data_post}).matched_count == 1:
-                if self.users.update_one({"_id": data["username"]}, {"$set": new_data_user}).matched_count == 1:
-                    return True
+            if self.users.find_one({"_id": data["username"]}):
+                if self.posts.update_one({"_id": id_str}, {"$set": new_data_post}).matched_count == 1:
+                    if self.users.update_one({"_id": data["username"]}, {"$set": new_data_user}).matched_count == 1:
+                        return True
 
             return None
         except Exception as _ex:
             logger.error(_ex)
             return None
 
-    def delete_data(self, id: str) -> Optional[bool]:
+    def delete_data(self, id_str: str) -> Optional[bool]:
         """Remove data from the database collections
 
-        :param id: unique post key
+        :param id_str: unique post key
         :return: bool value (flag) or None
         """
         try:
-            username: str = self.posts.find_one({"_id": id})["username"]
+            username: str = self.posts.find_one({"_id": id_str})["username"]
 
-            if self.posts.delete_one({"_id": id}):
+            if self.posts.delete_one({"_id": id_str}):
                 if not self.posts.find_one({"username": username}):
                     self.users.delete_one({"_id": username})
                 return True
