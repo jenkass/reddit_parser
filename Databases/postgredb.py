@@ -33,7 +33,7 @@ class PostgreDB(Database):
         cursor - object for interaction with the database.
         connection.autocommit - automatically save all changes to the database.
         """
-        self.connection: psycopg2.connect = psycopg2.connect(host=HOST, user=USER, password=PASSWORD, database=DB_NAME)
+        self.connection: psycopg2.connect = psycopg2.connect(user=USER, password=PASSWORD, database=DB_NAME)
         self.cursor = self.connection.cursor()
         self.connection.autocommit = True
         self.cursor.execute(

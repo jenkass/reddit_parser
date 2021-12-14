@@ -10,4 +10,4 @@ reddit*.txt
 /resourсes/*.html
 /resourсes/*.py
 *init*.py
-
+/database.yaml

@@ -43,13 +43,68 @@ List of service methods and endpoints:
 Unless otherwise specified, all requests return code ``200`` if successful; those referring to a line (document) number return ``404``
 if no line (document) with the requested number is found. Unless otherwise specified, the response content is empty.
 
+Docker
+---------------------------
+Docker is used to run the database servers.
+You need to download it from the official website https://www.docker.com/products/docker-desktop and install it on your computer.
+
+Docker compose
+---------------------------
+Create a Docker-compose file - ``name_file.yaml`` with the following contents:
+
+.. code-block:: shell
+
+    version: '3'
+    services:
+        mongodb:
+            image: mongo
+            ports:
+                - "`port_your_local_machine`:27017"
+            environment:
+                - MONGO_INITDB_ROOT_USERNAME=`your_username`
+                - MONGO_INITDB_ROOT_PASSWORD=`your_password`
+            volumes:
+                - mongo-data:/data/db
+        postgres:
+            image: postgres
+            ports:
+                - "`port_your_local_machine`:5432"
+            restart: always
+            environment:
+                - POSTGRES_PASSWORD=`your_password`
+                - POSTGRES_USER=`your_username`
+                - POSTGRES_DB=`your_name_database`
+            volumes:
+                - postgre-data:/var/lib/postgresql/data
+    volumes:
+        mongo-data:
+            driver: local
+        postgre-data:
+            driver: local
+
+Where you need to insert your parameters:
+
+    - ``port_your_local_machine``: the host on which the database will run
+    - ``your_username``: username username
+    - ``your_password``: password to connect to the database
+    - ``your_name_database``: database name
+
+To start Docker-compose in the terminal, type:
+
+.. code-block:: shell
+
+    > docker compose -f `file_name`.yaml up
+
+After that, the appropriate images will be downloaded and all server database containers will run.
+
 MongoDB
 ---------------------------
 To connect the database to the project, you need:
 
-1) To register at ``https://cloud.mongodb.com/``
-2) Create your ``cluster``, ``database user`` and ``IP-address``
-3) After that, when connecting in the code in the file ``Databases\mongodb.py`` in the ``CLUSTER`` variable put the string to connect to the cluster
+    In the CLUSTER variable, write the database connection string, such as ``"mongodb://`user`:`password`@localhost:27017"``.
+    where ``user`` is the database user name,
+    ``password`` - password for connection.
+    These parameters were specified in the ``Docker-compose`` file.
 
 The database will have 2 collections: ``posts`` and ``users``.
 
@@ -61,9 +116,7 @@ PostgreSQL
 ---------------------------
 To connect to a PostgreSQl server, you must:
 
-1) Download ``PostgreSQL`` from the official website ``https://www.postgresql.org/``
-2) Create a database with any name
-3) In the postgredb file set the ``HOST``, ``USER``, ``PASSWORD``, ``DB_NAME`` variables specified when you installed ``PostgreSQL`` on your computer
+    In the postgredb file set the ``USER``, ``PASSWORD``, ``DB_NAME`` variables to write the values that you specified in the ``Docker-compose`` file.
 
 The database will have 2 tables: ``posts`` and ``users``.
 
@@ -104,7 +157,9 @@ The chromedriver version is selected to match the Google Chrome version. The dow
 
     > python -m pip install -r requirements.txt
 
-6) Run the server
+6) Start Docker-compose. The startup process is described above.
+
+7) Run the server
 
    To select the resulting database, you must specify the optional parameter ``-db`` and the name of the database ``mongo`` or ``postgre``.
    By default, the database is selected ``mongo``
@@ -116,7 +171,7 @@ The chromedriver version is selected to match the Google Chrome version. The dow
     > python -m REST_API_Server.server -db 'mongo'
     > python -m REST_API_Server.server -db 'postgre'
 
-7) Run the script on another command line.
+8) Run the script on another command line.
 
    If you want to set the number of posts for parsing,
    you must specify the optional argument ``-cp`` and specify the number of posts.
@@ -137,4 +192,3 @@ Based on your choice of database, the results will be recorded in one of the ite
 
 1) If you chose ``MongoDB``, the results will be on cloud storage, where the database server resides in two collections: ``posts`` and ``users``
 2) If you choose ``PostgreSQL``, the results will be on your local database server in two tables:``posts`` and ``users``
-
